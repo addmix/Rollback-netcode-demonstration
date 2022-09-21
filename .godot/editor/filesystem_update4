@@ -1,0 +1,5 @@
+res://main.tscn
+res://singletons/ping_service.gd
+res://player/player_physical_character.tscn
+res://player/player_physical_character.gd
+res://singletons/multiplayer_singleton.gd

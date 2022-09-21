@@ -1,0 +1,31 @@
+[gd_scene load_steps=4 format=3 uid="uid://c7qeq3xvlx5rm"]
+
+[ext_resource type="Script" path="res://player/player_physical_character.gd" id="1_koh0l"]
+[ext_resource type="Texture2D" uid="uid://lvcou55vggfo" path="res://icon.png" id="2_ny4q4"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ll2w5"]
+radius = 32.0
+
+[node name="PlayerPhysicalCharacter" type="CharacterBody2D"]
+collision_layer = 2
+script = ExtResource("1_koh0l")
+
+[node name="CollisionShape2d" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_ll2w5")
+
+[node name="ID Label" type="Label" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -37.5
+offset_top = -58.0
+offset_right = 37.5
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "awefawef"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Sprite2d" type="Sprite2D" parent="."]
+texture = ExtResource("2_ny4q4")
