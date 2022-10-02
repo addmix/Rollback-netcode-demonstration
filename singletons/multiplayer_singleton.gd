@@ -89,8 +89,7 @@ func on_server_disconnected() -> void:
 
 
 func has_config() -> bool:
-	var dir := Directory.new()
-	dir.open(OS.get_executable_path().get_base_dir())
+	var dir := DirAccess.open(OS.get_executable_path().get_base_dir())
 	return dir.file_exists("config.ini")
 
 func create_config() -> void:

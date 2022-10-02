@@ -31,29 +31,23 @@ func _process(_delta : float) -> void:
 
 
 func _physics_process(delta : float) -> void:
-	var rollback_amount : Vector2 = (network_input - input) * SPEED * PingService.get_ping(get_multiplayer_authority()) / 2.0
 	if multiplayer.is_server():
-		#account for input lag
-#		position += rollback_amount
 		input = network_input
-		
 		
 		velocity.x = input.x * SPEED
 		velocity.y = input.y * SPEED
 	else:
 		if !is_multiplayer_authority():
-			position = server_time_machine.get_property_interpolated("position", MultiplayerSingleton.network_interpolation_duration)
-			velocity = server_time_machine.get_property_interpolated("velocity", MultiplayerSingleton.network_interpolation_duration)
+			position = server_time_machine.get_property_interpolated(&"position", MultiplayerSingleton.network_interpolation_duration)
+			velocity = server_time_machine.get_property_interpolated(&"velocity", MultiplayerSingleton.network_interpolation_duration)
 	
 	move_and_slide()
 	
 	if is_multiplayer_authority():
 		#save input history for client extrapolation
 		client_input_time_machine.create_entry()
-		client_input_time_machine.set_property("physics_delta", delta)
-		client_input_time_machine.set_property("input", input)
-		
-		
+		client_input_time_machine.set_property(&"physics_delta", delta)
+		client_input_time_machine.set_property(&"input", input)
 	
 	
 	#only the server has authority to update player positions
@@ -62,7 +56,6 @@ func _physics_process(delta : float) -> void:
 		server_time_machine.set_property(&"position", position)
 		server_time_machine.set_property(&"velocity", velocity)
 		server_time_machine.set_property(&"is_on_floor", is_on_floor())
-		server_time_machine.set_property(&"rollback", rollback_amount)
 		server_time_machine.set_property(&"ping", PingService.get_ping(get_multiplayer_authority()))
 		server_time_machine.append_to_network_buffer()
 	else:
@@ -99,39 +92,28 @@ func receive_server_time_machine_entry(server_time : int, entries : Array) -> vo
 	
 	#get complete server time machine with fewer RPCs
 	for entry in entries:
-		
-		
-		#adjust for cases of rollback/rollforward
-	#	var rollback_amount : Vector2 = (network_input - input) * SPEED * PingService.get_ping(get_multiplayer_authority())
-		var rollback : Vector2 = entry["rollback"]
-		var ping : float = entry["ping"] * 500.0
-		
+		var ping : float = entry[&"ping"] * 500.0
 		server_time_machine.get_closest_timestamp_after(Time.get_ticks_msec() - int(ping))
-		
-		#work backwards from current entry, 
-		#account for rollback until we've reached the entry ping seconds before this one
-		
 		server_time_machine.submit_entry(server_time - PingService.server_time_offset, entry)
 
 
 func movement_logic(input : Vector2, delta : float) -> Vector2:
-	
 	return Vector2.ZERO
-
 
 #jitter in here?
 
 #authority client extrapolation
 func extrapolate_by_input_buffer() -> void:
 	#get latest timestamp
-	var client_time : int = server_time_machine.get_closest_timestamp_before(Time.get_ticks_msec())
-	#get list of inputs every frame since last server update
-	var timestamps : PackedInt64Array = client_input_time_machine.get_timestamps_after(client_time)
+	var latest_entry : Dictionary = server_time_machine.get_most_recent_entry()
+	var timestamps : PackedInt64Array = client_input_time_machine.get_timestamps_after(latest_entry["time"])
 	
 	#sum up all movements
-	var last_position : Vector2 = server_time_machine.get_property_interpolated("position", MultiplayerSingleton.network_interpolation_duration)
+	var last_position : Vector2 = latest_entry["position"]
+	
+	#get substep interpolation
+	
 	for timestamp in timestamps:
-		
 		var entry : Dictionary = client_input_time_machine.get_entry(timestamp)
 		var delta : float = entry["physics_delta"]
 		var history_input : Vector2 = entry["input"]
@@ -141,6 +123,9 @@ func extrapolate_by_input_buffer() -> void:
 		calculated_velocity.y = history_input.y * SPEED
 		
 		last_position = last_position + calculated_velocity * delta
+	
+	#finally, do this frame's input
+	
 	
 	#apply position
 	position = last_position
